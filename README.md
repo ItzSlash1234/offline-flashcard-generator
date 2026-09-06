@@ -1,0 +1,2 @@
+# offline-flashcard-generator
+smth
