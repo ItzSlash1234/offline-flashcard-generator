@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart AI Flashcard Generator</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    header {
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+    }
+
+    .panel {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    textarea {
+      background-color: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    button {
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+
+    button:hover {
+      background-color: var(--accent-hover);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .deck-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .scene {
+      width: 100%;
+      max-width: 500px;
+      height: 280px;
+      perspective: 1000px;
+    }
+
+    .card {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .card.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-face-front {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      color: var(--text);
+    }
+
+    .card-face-back {
+      background: linear-gradient(135deg, #312e81, #1e1b4b);
+      color: var(--text);
+      transform: rotateY(180deg);
+    }
+
+    .card-label {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .card-content {
+      font-size: 1.2rem;
+      line-height: 1.6;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .counter {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Offline Flashcard Generator</h1>
+      <p>Instant flashcard creation — no API key or network required</p>
+    </header>
+
+    <div class="panel">
+      <div class="input-group">
+        <label for="prompt">Source Text / Notes</label>
+        <textarea id="prompt" rows="6" placeholder="Paste study notes or definitions here...&#10;&#10;Examples:&#10;- Photosynthesis is the process plants use to convert sunlight into energy.&#10;- Mitochondria are the powerhouse of the cell.&#10;- CPU stands for Central Processing Unit."></textarea>
+      </div>
+
+      <button id="generateBtn" onclick="generateCards()">Generate Flashcards</button>
+    </div>
+
+    <div class="deck-container" id="deckContainer">
+      <div class="scene">
+        <div class="card" id="flashcard" onclick="flipCard()">
+          <div class="card-face card-face-front">
+            <span class="card-label">Question</span>
+            <div class="card-content" id="frontText"></div>
+          </div>
+          <div class="card-face card-face-back">
+            <span class="card-label">Answer</span>
+            <div class="card-content" id="backText"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button onclick="prevCard()">← Prev</button>
+        <span class="counter" id="cardCounter">1 / 5</span>
+        <button onclick="nextCard()">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let cards = [];
+    let currentIndex = 0;
+
+    function flipCard() {
+      document.getElementById('flashcard').classList.toggle('is-flipped');
+    }
+
+    function updateCardDisplay() {
+      if (cards.length === 0) return;
+      const flashcard = document.getElementById('flashcard');
+      flashcard.classList.remove('is-flipped');
+      
+      setTimeout(() => {
+        document.getElementById('frontText').innerText = cards[currentIndex].question;
+        document.getElementById('backText').innerText = cards[currentIndex].answer;
+        document.getElementById('cardCounter').innerText = `${currentIndex + 1} / ${cards.length}`;
+      }, 150);
+    }
+
+    function prevCard() {
+      if (currentIndex > 0) {
+        currentIndex--;
+        updateCardDisplay();
+      }
+    }
+
+    function nextCard() {
+      if (currentIndex < cards.length - 1) {
+        currentIndex++;
+        updateCardDisplay();
+      }
+    }
+
+    // Client-side text parser logic (No API needed)
+    function generateCards() {
+      const inputText = document.getElementById('prompt').value.trim();
+      const deckContainer = document.getElementById('deckContainer');
+
+      if (!inputText) {
+        alert('Please enter or paste some text first.');
+        return;
+      }
+
+      cards = [];
+
+      // Split text into individual sentences or bullet lines
+      const lines = inputText
+        .split(/(?:\r\n|\r|\n|\. )+/)
+        .map(s => s.trim().replace(/^[-•*]\s*/, ''))
+        .filter(s => s.length > 10);
+
+      lines.forEach(sentence => {
+        // Pattern 1: Definition matches ("X is Y", "X refers to Y", "X stands for Y")
+        const defMatch = sentence.match(/^(.+?)\s+(is|are|refers to|stands for|means)\s+(.+)$/i);
+        
+        // Pattern 2: Key-value / Colon matches ("Term: Definition")
+        const colonMatch = sentence.match(/^(.+?):\s+(.+)$/);
+
+        if (colonMatch) {
+          cards.push({
+            question: `What is ${colonMatch[1]}?`,
+            answer: colonMatch[2]
+          });
+        } else if (defMatch) {
+          cards.push({
+            question: `What is ${defMatch[1]}?`,
+            answer: sentence
+          });
+        } else {
+          // Pattern 3: Fallback fill-in-the-blank extraction
+          const words = sentence.split(' ');
+          if (words.length > 5) {
+            const blankTarget = words[0] + " " + words[1];
+            const cloze = sentence.replace(blankTarget, "_______");
+            cards.push({
+              question: `Fill in the blank:\n"${cloze}"`,
+              answer: blankTarget
+            });
+          }
+        }
+      });
+
+      if (cards.length === 0) {
+        alert('Could not extract flashcards. Try pasting full sentences or "Term: Definition" pairs.');
+        return;
+      }
+
+      currentIndex = 0;
+      deckContainer.style.display = 'flex';
+      updateCardDisplay();
+    }
+  </script>
+</body>
+</html>
